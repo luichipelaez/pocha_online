@@ -1,0 +1,394 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-color: #1b1b1b;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+#pantalla-juego {
+    position: relative;
+    width: 1000px;
+    height: 700px;
+    background-color: #228b22;
+    border: 12px solid #5c3a21;
+    border-radius: 30px;
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.6), 0 0 20px rgba(0,0,0,0.8);
+}
+
+/* Marcador Lateral */
+#marcador {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.75);
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    z-index: 10;
+    min-width: 160px;
+}
+
+.cabecera-marcador {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.iconos-marcador {
+    display: flex;
+    gap: 8px;
+}
+
+#btn-abrir-config {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: gold;
+    transition: transform 0.2s;
+}
+
+#btn-abrir-config:hover {
+    transform: rotate(45deg);
+}
+
+#marcador ul { list-style: none; }
+#marcador li { margin-bottom: 4px; }
+
+/* Banners Superiores */
+#barras-superiores {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    z-index: 15;
+}
+
+#info-triunfo, #info-bazas-top {
+    background: #222;
+    color: gold;
+    padding: 6px 16px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    font-weight: bold;
+    font-size: 14px;
+    border: 1px solid rgba(255, 215, 0, 0.4);
+    border-top: none;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+}
+
+/* Banner de Narración */
+#banner-mensaje {
+    position: absolute;
+    top: 110px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.85);
+    padding: 6px 20px;
+    border-radius: 20px;
+    border: 1px solid gold;
+    font-size: 14px;
+    z-index: 10;
+    white-space: nowrap;
+}
+
+/* Posiciones de Jugadores y Badges de Rol */
+.jugador-pos {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.65);
+    padding: 6px 12px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.cabecera-jugador {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 3px;
+}
+
+#jugador-2 { 
+    top: 50px; 
+    left: 50%; 
+    transform: translateX(-50%); 
+    z-index: 10;
+}
+
+#jugador-3 { top: 42%; left: 25px; }
+#jugador-1 { top: 42%; right: 25px; }
+
+.badge-rol {
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.badge-repartidor {
+    background-color: #d9534f;
+    color: white;
+}
+
+.badge-mano {
+    background-color: #5cb85c;
+    color: white;
+}
+
+.turno-activo {
+    border: 2px solid gold;
+    background: rgba(218, 165, 32, 0.4) !important;
+}
+
+/* Tapete y Cartas Jugadas */
+#tapete {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+#mesa-cartas {
+    position: absolute;
+    top: 52%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 320px;
+    height: 200px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Cartas */
+.carta-img {
+    width: 75px;
+    height: 115px;
+    border-radius: 6px;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+}
+
+.carta-jugable {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.carta-jugable:hover {
+    transform: translateY(-15px) scale(1.05);
+}
+
+.carta-bloqueada {
+    opacity: 0.35;
+    filter: grayscale(80%);
+    cursor: not-allowed;
+}
+
+/* Mano Humano */
+#zona-humano {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    width: 90%;
+}
+
+#info-humano {
+    margin-bottom: 8px;
+    background: rgba(0,0,0,0.65);
+    display: inline-block;
+    padding: 4px 15px;
+    border-radius: 8px;
+}
+
+#info-humano .badge-rol {
+    margin: 0 8px;
+}
+
+#mano-cartas {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* Panel de Apuestas */
+#panel-apuestas {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #333;
+    border: 3px solid gold;
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+    z-index: 100;
+}
+
+.texto-advertencia {
+    color: #ff4d4d;
+    font-weight: bold;
+    font-size: 15px;
+    margin-top: 6px;
+    margin-bottom: 5px;
+    min-height: 20px;
+}
+
+.controles-apuesta {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin: 15px 0;
+}
+
+.controles-apuesta button {
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+    font-weight: bold;
+    border-radius: 50%;
+    border: none;
+    background: gold;
+    cursor: pointer;
+}
+
+#cant-apuesta { font-size: 28px; font-weight: bold; }
+
+#btn-confirmar-apuesta {
+    background: gold;
+    border: none;
+    padding: 10px 25px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+#btn-confirmar-apuesta:disabled {
+    background: #666;
+    color: #aaa;
+    cursor: not-allowed;
+    border: 1px solid #444;
+}
+
+/* Modal de Configuración y Reinicio */
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+}
+
+.modal-contenido {
+    background: #2b2b2b;
+    border: 3px solid gold;
+    padding: 20px 30px;
+    border-radius: 15px;
+    width: 420px;
+}
+
+.modal-contenido h2 {
+    color: gold;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.seccion-config {
+    background: rgba(0,0,0,0.3);
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    border: 1px solid #444;
+}
+
+.seccion-config h3 {
+    font-size: 14px;
+    color: gold;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #555;
+    padding-bottom: 4px;
+}
+
+.campo-nombre, .campo-opcion {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.campo-nombre label, .campo-opcion label {
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.campo-nombre input, .campo-opcion select {
+    width: 190px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #111;
+    color: white;
+    font-size: 13px;
+}
+
+.texto-info-secuencia {
+    font-size: 12px;
+    color: #4da6ff;
+    margin-top: 8px;
+    text-align: center;
+    font-style: italic;
+}
+
+.acciones-modal {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-primario {
+    background: gold;
+    color: black;
+    border: none;
+    padding: 10px 20px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    flex: 1;
+}
+
+.btn-secundario {
+    background: #555;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.btn-primario:hover { background: #ffe066; }
+.btn-secundario:hover { background: #777; }
+
+.oculto { display: none !important; }

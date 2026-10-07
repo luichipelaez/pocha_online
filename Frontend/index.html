@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Pocha Web</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="pantalla-juego">
+        <!-- Marcador Lateral -->
+        <div id="marcador">
+            <div class="cabecera-marcador">
+                <h3>Puntos</h3>
+                <div class="iconos-marcador">
+                    <button id="btn-abrir-config" title="Nueva Partida / Reiniciar">🔄</button>
+                </div>
+            </div>
+            <ul id="lista-puntuaciones"></ul>
+        </div>
+
+        <!-- Banners Superiores de Información -->
+        <div id="barras-superiores">
+            <div id="info-triunfo">
+                <span id="texto-triunfo">TRIUNFO: -</span>
+            </div>
+            <div id="info-bazas-top">
+                <span id="texto-bazas-top">Pedidas: 0 / 0</span>
+            </div>
+        </div>
+
+        <!-- Banner de Narración -->
+        <div id="banner-mensaje">
+            <p id="mensaje-texto">Conectando al servidor...</p>
+        </div>
+
+        <!-- Tapete de Juego -->
+        <div id="tapete">
+            <!-- Posiciones Jugadores Bots -->
+            <div class="jugador-pos" id="jugador-2">
+                <div class="cabecera-jugador">
+                    <span class="nombre" id="nom-2">Enfrente</span>
+                    <span class="badge-rol" id="rol-2"></span>
+                </div>
+                <span class="apuesta-bazas" id="bazas-2">Bazas: 0/?</span>
+            </div>
+            <div class="jugador-pos" id="jugador-3">
+                <div class="cabecera-jugador">
+                    <span class="nombre" id="nom-3">Izquierda</span>
+                    <span class="badge-rol" id="rol-3"></span>
+                </div>
+                <span class="apuesta-bazas" id="bazas-3">Bazas: 0/?</span>
+            </div>
+            <div class="jugador-pos" id="jugador-1">
+                <div class="cabecera-jugador">
+                    <span class="nombre" id="nom-1">Derecha</span>
+                    <span class="badge-rol" id="rol-1"></span>
+                </div>
+                <span class="apuesta-bazas" id="bazas-1">Bazas: 0/?</span>
+            </div>
+
+            <!-- Cartas Jugadas en Mesa -->
+            <div id="mesa-cartas"></div>
+        </div>
+
+        <!-- Panel emergente para Pedir/Apostar -->
+        <div id="panel-apuestas" class="oculto">
+            <h3>¿Cuántas bazas pides?</h3>
+            <p id="texto-prohibido" class="texto-advertencia"></p>
+            <div class="controles-apuesta">
+                <button id="btn-menos">-</button>
+                <span id="cant-apuesta">0</span>
+                <button id="btn-mas">+</button>
+            </div>
+            <button id="btn-confirmar-apuesta">PEDIR</button>
+        </div>
+
+        <!-- Zona del Jugador Humano -->
+        <div id="zona-humano">
+            <div id="info-humano">
+                <span class="nombre" id="nom-0">Tú (Luis)</span>
+                <span class="badge-rol" id="rol-0"></span>
+                <span class="apuesta-bazas" id="bazas-0">Bazas: 0/?</span>
+            </div>
+            <div id="mano-cartas"></div>
+        </div>
+    </div>
+
+    <!-- Modal para Nueva Partida / Reiniciar -->
+    <div id="modal-config" class="modal-overlay oculto">
+        <div class="modal-contenido">
+            <h2>Configurar Nueva Partida</h2>
+            
+            <div class="seccion-config">
+                <h3>Jugadores</h3>
+                <div class="campo-nombre">
+                    <label for="input-nom-0">Tú (Abajo):</label>
+                    <input type="text" id="input-nom-0" value="Luis">
+                </div>
+                <div class="campo-nombre">
+                    <label for="input-nom-1">Derecha:</label>
+                    <input type="text" id="input-nom-1" value="Guille (Bot)">
+                </div>
+                <div class="campo-nombre">
+                    <label for="input-nom-2">Enfrente:</label>
+                    <input type="text" id="input-nom-2" value="Pepe (Bot)">
+                </div>
+                <div class="campo-nombre">
+                    <label for="input-nom-3">Izquierda:</label>
+                    <input type="text" id="input-nom-3" value="Amador (Bot)">
+                </div>
+            </div>
+
+            <div class="seccion-config">
+                <h3>Modalidad de Juego</h3>
+                <div class="campo-opcion">
+                    <label for="select-carta-inicio">Empezar por:</label>
+                    <select id="select-carta-inicio">
+                        <option value="1" selected>1 Carta (Por defecto)</option>
+                        <option value="2">2 Cartas</option>
+                        <option value="3">3 Cartas</option>
+                        <option value="4">4 Cartas</option>
+                        <option value="5">5 Cartas</option>
+                        <option value="6">6 Cartas</option>
+                        <option value="7">7 Cartas</option>
+                        <option value="8">8 Cartas</option>
+                        <option value="9">9 Cartas</option>
+                        <option value="10">10 Cartas</option>
+                    </select>
+                </div>
+                <div class="campo-opcion">
+                    <label for="select-manos-pico">Manos a 10 cartas:</label>
+                    <select id="select-manos-pico">
+                        <option value="4" selected>4 Manos (Por defecto)</option>
+                        <option value="3">3 Manos</option>
+                        <option value="2">2 Manos</option>
+                        <option value="1">1 Mano</option>
+                    </select>
+                </div>
+                <p id="resumen-secuencia" class="texto-info-secuencia"></p>
+            </div>
+
+            <div class="acciones-modal">
+                <button id="btn-cancelar-config" class="btn-secundario">Cancelar</button>
+                <button id="btn-iniciar-nueva-partida" class="btn-primario">▶ Iniciar Partida</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
