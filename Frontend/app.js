@@ -1,5 +1,8 @@
-const ws = new WebSocket("ws://127.0.0.1:8000/ws/0");
+// Detecta automáticamente si debe usar 'wss:' (para HTTPS en Render) o 'ws:' (para HTTP en local)
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const wsUrl = `${protocol}//${window.location.host}/ws/0`;
 
+const socket = new WebSocket(wsUrl);
 let miApuestaSeleccionada = 0;
 let maxCartasRonda = 1;
 let prohibidoActual = -1;
