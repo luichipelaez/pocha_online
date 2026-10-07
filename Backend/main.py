@@ -1,6 +1,16 @@
 import asyncio
+import os
+import sys
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+# 1. Asegurar que Python encuentre game_logic sin importar desde dónde se ejecute el comando
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.append(BASE_DIR)
+
 from game_logic import PartidaPocha
 
 app = FastAPI()
@@ -12,6 +22,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 2. Localizar directorio Frontend (comprueba mayúsculas y minúsculas)
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+FRONTEND_DIR = os.path.join(ROOT_DIR, "Frontend")
+if not os.path.exists(FRONTEND_DIR):
+    FRONTEND_DIR = os.path.join(ROOT_DIR, "frontend")
+
+# Montar estáticos si la carpeta Frontend existe
+if os.path.exists(FRONTEND_DIR):
+    app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
+# Ruta principal (servir index.html o responder estado online)
+@app.get("/")
+async def root():
+    index_file = os.path.join(FRONTEND_DIR, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    return {
+        "status": "online",
+        "mensaje": "Servidor Pocha Online activo",
+        "websocket": "/ws/{player_id}"
+    }
 
 class ConnectionManager:
     def __init__(self):
