@@ -2,7 +2,8 @@
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const wsUrl = `${protocol}//${window.location.host}/ws/0`;
 
-const socket = new WebSocket(wsUrl);
+// Corregido: la variable ahora se llama 'ws'
+const ws = new WebSocket(wsUrl);
 let miApuestaSeleccionada = 0;
 let maxCartasRonda = 1;
 let prohibidoActual = -1;
