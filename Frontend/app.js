@@ -1,5 +1,5 @@
 let ws = null;
-let miJugadorId = 0; // Se actualiza dinámicamente según lo que indique el servidor
+let miJugadorId = 0; // ID del jugador (0 por defecto)
 let miApuestaSeleccionada = 0;
 let maxCartasRonda = 1;
 let prohibidoActual = -1;
@@ -30,46 +30,59 @@ const selectCartaInicio = document.getElementById("select-carta-inicio");
 const selectManosPico = document.getElementById("select-manos-pico");
 const resumenSecuencia = document.getElementById("resumen-secuencia");
 
-// Manejo de Interfaz de Lobby
-selectModo.onchange = () => {
+// Función para alternar la visibilidad de la sala en el lobby
+function actualizarVisibilidadLobby() {
     if (selectModo.value === "bots") {
         grupoCodigoSala.classList.add("oculto");
     } else {
         grupoCodigoSala.classList.remove("oculto");
     }
-};
+}
 
+selectModo.onchange = actualizarVisibilidadLobby;
+actualizarVisibilidadLobby(); // Ejecutar al cargar
+
+// Botón "Entrar a la Partida"
 btnEntrarJuego.onclick = () => {
-    const nombre = inputMiNombre.value.trim() || "Jugador";
+    const nombre = inputMiNombre.value.trim() || "Luis";
     const modo = selectModo.value;
     
-    // Si es modo contra bots, creamos un ID de sala único aleatorio
+    // Si la sala está vacía o es modo bots, conecta a la sala principal 0
     let sala = inputCodigoSala.value.trim();
     if (modo === "bots" || !sala) {
-        sala = "solo_" + Math.random().toString(36).substring(2, 7);
+        sala = "0";
     }
+
+    // Ocultar el modal de inmediato
+    modalLobby.classList.add("oculto");
 
     conectarASala(sala, nombre, modo);
 };
 
 function conectarASala(salaId, nombreJugador, modo) {
+    // Si ya hay un WebSocket abierto, lo cerramos antes de abrir uno nuevo
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        ws.close();
+    }
+
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = isLocal ? 'localhost:8000' : window.location.host;
 
-    const wsUrl = `${protocol}//${host}/ws/${salaId}?nombre=${encodeURIComponent(nombreJugador)}&modo=${modo}`;
+    // Conexión limpia al endpoint WS
+    const wsUrl = `${protocol}//${host}/ws/${salaId}`;
     
+    bannerMensaje.innerText = "Conectando al servidor...";
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
         console.log(`Conectado exitosamente a la sala: ${salaId}`);
-        modalLobby.classList.add("oculto");
+        bannerMensaje.innerText = "Conectado. ¡Que empiece la partida!";
     };
 
     ws.onmessage = (event) => {
         const estado = JSON.parse(event.data);
         
-        // Si el servidor envía asignación de asiento/ID de jugador
         if (estado.tu_id !== undefined) {
             miJugadorId = estado.tu_id;
         }
@@ -80,6 +93,10 @@ function conectarASala(salaId, nombreJugador, modo) {
     ws.onerror = (err) => {
         console.error("Error en WebSocket:", err);
         bannerMensaje.innerText = "Error de conexión con el servidor.";
+    };
+
+    ws.onclose = () => {
+        console.log("WebSocket cerrado.");
     };
 }
 
