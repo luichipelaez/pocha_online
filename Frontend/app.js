@@ -1,12 +1,16 @@
-// Detecta automáticamente si debe usar 'wss:' (para HTTPS en Render) o 'ws:' (para HTTP en local)
-const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const wsUrl = `${protocol}//${window.location.host}/ws/0`;
-
-// Corregido: la variable ahora se llama 'ws'
-const ws = new WebSocket(wsUrl);
+let ws = null;
+let miJugadorId = 0; // Se actualiza dinámicamente según lo que indique el servidor
 let miApuestaSeleccionada = 0;
 let maxCartasRonda = 1;
 let prohibidoActual = -1;
+
+// Elementos DOM
+const modalLobby = document.getElementById("modal-lobby");
+const inputMiNombre = document.getElementById("input-mi-nombre");
+const selectModo = document.getElementById("select-modo");
+const grupoCodigoSala = document.getElementById("grupo-codigo-sala");
+const inputCodigoSala = document.getElementById("input-codigo-sala");
+const btnEntrarJuego = document.getElementById("btn-entrar-juego");
 
 const bannerMensaje = document.getElementById("mensaje-texto");
 const textoTriunfo = document.getElementById("texto-triunfo");
@@ -26,14 +30,58 @@ const selectCartaInicio = document.getElementById("select-carta-inicio");
 const selectManosPico = document.getElementById("select-manos-pico");
 const resumenSecuencia = document.getElementById("resumen-secuencia");
 
-ws.onopen = () => {
-    console.log("Conectado al servidor de la Pocha.");
+// Manejo de Interfaz de Lobby
+selectModo.onchange = () => {
+    if (selectModo.value === "bots") {
+        grupoCodigoSala.classList.add("oculto");
+    } else {
+        grupoCodigoSala.classList.remove("oculto");
+    }
 };
 
-ws.onmessage = (event) => {
-    const estado = JSON.parse(event.data);
-    actualizarPantalla(estado);
+btnEntrarJuego.onclick = () => {
+    const nombre = inputMiNombre.value.trim() || "Jugador";
+    const modo = selectModo.value;
+    
+    // Si es modo contra bots, creamos un ID de sala único aleatorio
+    let sala = inputCodigoSala.value.trim();
+    if (modo === "bots" || !sala) {
+        sala = "solo_" + Math.random().toString(36).substring(2, 7);
+    }
+
+    conectarASala(sala, nombre, modo);
 };
+
+function conectarASala(salaId, nombreJugador, modo) {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = isLocal ? 'localhost:8000' : window.location.host;
+
+    const wsUrl = `${protocol}//${host}/ws/${salaId}?nombre=${encodeURIComponent(nombreJugador)}&modo=${modo}`;
+    
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+        console.log(`Conectado exitosamente a la sala: ${salaId}`);
+        modalLobby.classList.add("oculto");
+    };
+
+    ws.onmessage = (event) => {
+        const estado = JSON.parse(event.data);
+        
+        // Si el servidor envía asignación de asiento/ID de jugador
+        if (estado.tu_id !== undefined) {
+            miJugadorId = estado.tu_id;
+        }
+
+        actualizarPantalla(estado);
+    };
+
+    ws.onerror = (err) => {
+        console.error("Error en WebSocket:", err);
+        bannerMensaje.innerText = "Error de conexión con el servidor.";
+    };
+}
 
 function actualizarEstadoBotonApuesta() {
     cantApuestaSpan.innerText = miApuestaSeleccionada;
@@ -114,16 +162,16 @@ function actualizarPantalla(estado) {
         mesaSlot.appendChild(img);
     });
 
-    // Mano del humano
+    // Mano del jugador actual
     manoCartasContainer.innerHTML = "";
-    const yo = estado.jugadores[0];
+    const yo = estado.jugadores[miJugadorId];
     if (yo && yo.mano) {
         yo.mano.forEach((carta) => {
             const img = document.createElement("img");
             img.src = `cartas_img/${carta.key}.png`;
             img.className = "carta-img";
 
-            if (estado.estado === "JUGANDO" && estado.turno === 0) {
+            if (estado.estado === "JUGANDO" && estado.turno === miJugadorId) {
                 if (carta.legal) {
                     img.classList.add("carta-jugable");
                     img.onclick = () => {
@@ -138,7 +186,7 @@ function actualizarPantalla(estado) {
     }
 
     // Panel Apuestas
-    if (estado.estado === "APUESTAS" && estado.turno === 0 && yo.apuesta === -1) {
+    if (estado.estado === "APUESTAS" && estado.turno === miJugadorId && yo && yo.apuesta === -1) {
         if (panelApuestas.classList.contains("oculto")) {
             panelApuestas.classList.remove("oculto");
             miApuestaSeleccionada = 0;
@@ -215,12 +263,14 @@ btnIniciarNuevaPartida.onclick = () => {
     const cartaInicio = parseInt(selectCartaInicio.value);
     const manosPico = parseInt(selectManosPico.value);
 
-    ws.send(JSON.stringify({
-        action: "reiniciar_partida",
-        nombres: [n0, n1, n2, n3],
-        carta_inicio: cartaInicio,
-        manos_pico: manosPico
-    }));
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            action: "reiniciar_partida",
+            nombres: [n0, n1, n2, n3],
+            carta_inicio: cartaInicio,
+            manos_pico: manosPico
+        }));
+    }
 
     modalConfig.classList.add("oculto");
 };
