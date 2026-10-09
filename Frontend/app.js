@@ -8,6 +8,8 @@ let prohibidoActual = -1;
 const modalLobby = document.getElementById("modal-lobby");
 const inputMiNombre = document.getElementById("input-mi-nombre");
 const selectModo = document.getElementById("select-modo");
+const grupoSalasActivas = document.getElementById("grupo-salas-activas");
+const selectSalasActivas = document.getElementById("select-salas-activas");
 const grupoCodigoSala = document.getElementById("grupo-codigo-sala");
 const inputCodigoSala = document.getElementById("input-codigo-sala");
 const btnEntrarJuego = document.getElementById("btn-entrar-juego");
@@ -17,6 +19,11 @@ const textoTriunfo = document.getElementById("texto-triunfo");
 const textoBazasTop = document.getElementById("texto-bazas-top");
 const listaPuntos = document.getElementById("lista-puntuaciones");
 const manoCartasContainer = document.getElementById("mano-cartas");
+
+const panelEspera = document.getElementById("panel-espera");
+const textoEstadoEspera = document.getElementById("texto-estado-espera");
+const btnComenzarPartida = document.getElementById("btn-comenzar-partida");
+
 const panelApuestas = document.getElementById("panel-apuestas");
 const cantApuestaSpan = document.getElementById("cant-apuesta");
 const textoProhibido = document.getElementById("texto-prohibido");
@@ -30,26 +37,72 @@ const selectCartaInicio = document.getElementById("select-carta-inicio");
 const selectManosPico = document.getElementById("select-manos-pico");
 const resumenSecuencia = document.getElementById("resumen-secuencia");
 
-// Control de visibilidad en el lobby
+// Cargar lista de salas activas desde la API HTTP
+async function cargarSalasActivas() {
+    try {
+        const response = await fetch('/api/salas');
+        if (response.ok) {
+            const salas = await response.json();
+            selectSalasActivas.innerHTML = '';
+            
+            if (salas.length > 0) {
+                salas.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    const estadoTxt = s.iniciada ? 'En juego' : 'Esperando';
+                    opt.innerText = `${s.id} (${s.humanos}/4 jug. - ${estadoTxt})`;
+                    selectSalasActivas.appendChild(opt);
+                });
+            }
+            
+            const optNueva = document.createElement('option');
+            optNueva.value = 'nueva';
+            optNueva.innerText = '+ Crear nueva sala...';
+            selectSalasActivas.appendChild(optNueva);
+
+            actualizarVisibilidadSeleccionSala();
+        }
+    } catch (e) {
+        console.error("Error al cargar salas activas:", e);
+    }
+}
+
 function actualizarVisibilidadLobby() {
     if (selectModo.value === "bots") {
+        grupoSalasActivas.classList.add("oculto");
         grupoCodigoSala.classList.add("oculto");
     } else {
+        grupoSalasActivas.classList.remove("oculto");
+        cargarSalasActivas();
+    }
+}
+
+function actualizarVisibilidadSeleccionSala() {
+    if (selectSalasActivas.value === "nueva") {
         grupoCodigoSala.classList.remove("oculto");
+    } else {
+        grupoCodigoSala.classList.add("oculto");
     }
 }
 
 selectModo.onchange = actualizarVisibilidadLobby;
+selectSalasActivas.onchange = actualizarVisibilidadSeleccionSala;
 actualizarVisibilidadLobby();
 
-// Evento al hacer clic en "Entrar a la Partida"
+// Entrar a la partida
 btnEntrarJuego.onclick = () => {
     const nombre = inputMiNombre.value.trim() || "Luis";
     const modo = selectModo.value;
     
-    let sala = inputCodigoSala.value.trim();
-    if (modo === "bots" || !sala) {
+    let sala = "";
+    if (modo === "bots") {
         sala = "solo_" + Math.random().toString(36).substring(2, 7);
+    } else {
+        if (selectSalasActivas.value === "nueva" || !selectSalasActivas.value) {
+            sala = inputCodigoSala.value.trim() || "sala1";
+        } else {
+            sala = selectSalasActivas.value;
+        }
     }
 
     modalLobby.classList.add("oculto");
@@ -72,7 +125,7 @@ function conectarASala(salaId, nombreJugador, modo) {
 
     ws.onopen = () => {
         console.log(`Conectado a la sala: ${salaId}`);
-        bannerMensaje.innerText = "¡Conectado a la partida!";
+        bannerMensaje.innerText = "¡Conectado a la sala!";
     };
 
     ws.onmessage = (event) => {
@@ -91,6 +144,13 @@ function conectarASala(salaId, nombreJugador, modo) {
     };
 }
 
+// Botón para comenzar la partida en multijugador
+btnComenzarPartida.onclick = () => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: "iniciar_partida" }));
+    }
+};
+
 function actualizarEstadoBotonApuesta() {
     cantApuestaSpan.innerText = miApuestaSeleccionada;
     if (prohibidoActual !== -1 && miApuestaSeleccionada === prohibidoActual) {
@@ -106,7 +166,15 @@ function actualizarPantalla(estado) {
     maxCartasRonda = estado.cant_cartas;
     prohibidoActual = (estado.prohibido !== undefined) ? estado.prohibido : -1;
 
-    // Marcador y cálculo superior de apuestas
+    // Manejo del Panel de Espera Multijugador
+    if (estado.esperando_inicio) {
+        panelEspera.classList.remove("oculto");
+        textoEstadoEspera.innerText = `Conectados: ${estado.num_conectados}/4 jugadores.\n${estado.mensaje}`;
+    } else {
+        panelEspera.classList.add("oculto");
+    }
+
+    // Marcador y superior
     const totalPedidas = estado.total_apuestas;
     const totalCartas = estado.cant_cartas;
     let estadoPedidaTexto = "";
@@ -122,15 +190,13 @@ function actualizarPantalla(estado) {
     }
     textoBazasTop.innerText = `Pedidas: ${totalPedidas} / ${totalCartas} ${estadoPedidaTexto}`;
 
-    // Marcador lateral y asignación de posiciones dinámicas en mesa
+    // Posicionamiento dinámico relativo en mesa
     listaPuntos.innerHTML = "";
     estado.jugadores.forEach((jug) => {
         const li = document.createElement("li");
         li.innerText = `${jug.nombre}: ${jug.puntos} pts`;
         listaPuntos.appendChild(li);
 
-        // Mapeo relativo para que CADA jugador se vea SIEMPRE abajo
-        // relPos: 0 = Abajo (Tú), 1 = Derecha, 2 = Enfrente, 3 = Izquierda
         const relPos = (jug.id - miJugadorId + 4) % 4;
 
         const apTxt = jug.apuesta !== -1 ? jug.apuesta : "?";
@@ -164,7 +230,7 @@ function actualizarPantalla(estado) {
         }
     });
 
-    // Cartas en la Mesa
+    // Cartas en Mesa
     const mesaSlot = document.getElementById("mesa-cartas");
     mesaSlot.innerHTML = "";
     estado.mesa.forEach((item) => {
@@ -174,7 +240,7 @@ function actualizarPantalla(estado) {
         mesaSlot.appendChild(img);
     });
 
-    // Mano del Jugador Local
+    // Mano Jugador Local
     manoCartasContainer.innerHTML = "";
     const yo = estado.jugadores[miJugadorId];
     if (yo && yo.mano) {
@@ -215,7 +281,7 @@ function actualizarPantalla(estado) {
     }
 }
 
-// Botones para pedir/apostar
+// Botones Pedir / Apostar
 document.getElementById("btn-mas").onclick = () => {
     if (miApuestaSeleccionada < maxCartasRonda) {
         miApuestaSeleccionada++;
@@ -240,7 +306,7 @@ btnConfirmarApuesta.onclick = () => {
     cantApuestaSpan.innerText = 0;
 };
 
-// Generador de Vista Previa de la Secuencia
+// Secuencia de juego
 function actualizarResumenSecuencia() {
     const inicio = parseInt(selectCartaInicio.value);
     const pico = parseInt(selectManosPico.value);
@@ -256,7 +322,6 @@ function actualizarResumenSecuencia() {
 selectCartaInicio.onchange = actualizarResumenSecuencia;
 selectManosPico.onchange = actualizarResumenSecuencia;
 
-// Configuración / Reinicio de partida
 btnAbrirConfig.onclick = () => {
     actualizarResumenSecuencia();
     modalConfig.classList.remove("oculto");
