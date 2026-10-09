@@ -27,8 +27,15 @@
                     </select>
                 </div>
 
+                <div class="campo-opcion oculto" id="grupo-salas-activas">
+                    <label for="select-salas-activas">Salas Activas:</label>
+                    <select id="select-salas-activas">
+                        <option value="nueva">+ Crear nueva sala...</option>
+                    </select>
+                </div>
+
                 <div class="campo-nombre oculto" id="grupo-codigo-sala">
-                    <label for="input-codigo-sala">Código de Sala:</label>
+                    <label for="input-codigo-sala">Nombre de Sala:</label>
                     <input type="text" id="input-codigo-sala" placeholder="ej. sala1" value="sala1">
                 </div>
             </div>
@@ -94,6 +101,13 @@
 
             <!-- Cartas Jugadas en Mesa -->
             <div id="mesa-cartas"></div>
+        </div>
+
+        <!-- Panel emergente para Esperar Inicio en Multijugador -->
+        <div id="panel-espera" class="oculto">
+            <h3>Sala de Espera</h3>
+            <p id="texto-estado-espera">Esperando a los demás jugadores...</p>
+            <button id="btn-comenzar-partida" class="btn-primario" style="margin-top: 15px;">▶ Comenzar Partida</button>
         </div>
 
         <!-- Panel emergente para Pedir/Apostar -->
