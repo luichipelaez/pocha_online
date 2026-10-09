@@ -7,6 +7,39 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+    <!-- Modal de Lobby / Entrada al Juego -->
+    <div id="modal-lobby" class="modal-overlay">
+        <div class="modal-contenido">
+            <h2>La Pocha Online</h2>
+            
+            <div class="seccion-config">
+                <div class="campo-nombre">
+                    <label for="input-mi-nombre">Tu Nombre:</label>
+                    <input type="text" id="input-mi-nombre" value="Luis">
+                </div>
+                
+                <div class="campo-opcion">
+                    <label for="select-modo">Modo de Juego:</label>
+                    <select id="select-modo">
+                        <option value="bots" selected>Individual (Tú + 3 Bots)</option>
+                        <option value="multi">Multijugador en Línea</option>
+                    </select>
+                </div>
+
+                <div class="campo-nombre oculto" id="grupo-codigo-sala">
+                    <label for="input-codigo-sala">Código de Sala:</label>
+                    <input type="text" id="input-codigo-sala" placeholder="ej. sala1" value="sala1">
+                </div>
+            </div>
+
+            <div class="acciones-modal">
+                <button id="btn-entrar-juego" class="btn-primario">▶ Entrar a la Partida</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla Principal del Juego -->
     <div id="pantalla-juego">
         <!-- Marcador Lateral -->
         <div id="marcador">
@@ -31,12 +64,12 @@
 
         <!-- Banner de Narración -->
         <div id="banner-mensaje">
-            <p id="mensaje-texto">Conectando al servidor...</p>
+            <p id="mensaje-texto">Esperando conexión...</p>
         </div>
 
         <!-- Tapete de Juego -->
         <div id="tapete">
-            <!-- Posiciones Jugadores Bots -->
+            <!-- Posiciones Jugadores Opuestos -->
             <div class="jugador-pos" id="jugador-2">
                 <div class="cabecera-jugador">
                     <span class="nombre" id="nom-2">Enfrente</span>
@@ -78,7 +111,7 @@
         <!-- Zona del Jugador Humano -->
         <div id="zona-humano">
             <div id="info-humano">
-                <span class="nombre" id="nom-0">Tú (Luis)</span>
+                <span class="nombre" id="nom-0">Tú</span>
                 <span class="badge-rol" id="rol-0"></span>
                 <span class="apuesta-bazas" id="bazas-0">Bazas: 0/?</span>
             </div>
@@ -94,19 +127,19 @@
             <div class="seccion-config">
                 <h3>Jugadores</h3>
                 <div class="campo-nombre">
-                    <label for="input-nom-0">Tú (Abajo):</label>
+                    <label for="input-nom-0">Jugador 1:</label>
                     <input type="text" id="input-nom-0" value="Luis">
                 </div>
                 <div class="campo-nombre">
-                    <label for="input-nom-1">Derecha:</label>
+                    <label for="input-nom-1">Jugador 2:</label>
                     <input type="text" id="input-nom-1" value="Guille (Bot)">
                 </div>
                 <div class="campo-nombre">
-                    <label for="input-nom-2">Enfrente:</label>
+                    <label for="input-nom-2">Jugador 3:</label>
                     <input type="text" id="input-nom-2" value="Pepe (Bot)">
                 </div>
                 <div class="campo-nombre">
-                    <label for="input-nom-3">Izquierda:</label>
+                    <label for="input-nom-3">Jugador 4:</label>
                     <input type="text" id="input-nom-3" value="Amador (Bot)">
                 </div>
             </div>
