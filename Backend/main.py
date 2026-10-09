@@ -29,6 +29,14 @@ class Sala:
         self.connections: dict[int, WebSocket] = {}
         nombres_defecto = ["Jugador 1", "Guille (Bot)", "Pepe (Bot)", "Amador (Bot)"]
         self.partida = PartidaPocha(nombres_defecto, carta_inicio=1, manos_pico=4)
+        
+        # Si es modo individual contra bots, inicia de inmediato.
+        # En multijugador se queda en espera hasta pulsar 'Comenzar'.
+        self.iniciada = (modo == "bots")
+        if not self.iniciada:
+            self.partida.estado = "ESPERANDO"
+            self.partida.mensaje = "Esperando jugadores. Pulsa 'Comenzar Partida' para iniciar."
+
         self.lock = asyncio.Lock()
         self.task = asyncio.create_task(self.bucle_juego_bots())
 
@@ -37,10 +45,8 @@ class Sala:
         async with self.lock:
             asiento_libre = None
             if self.modo == "bots":
-                # En modo solo bots, el jugador local toma el asiento 0
                 asiento_libre = 0
             else:
-                # En multijugador, asigna el primer asiento disponible (0 a 3)
                 for i in range(4):
                     if i not in self.connections:
                         asiento_libre = i
@@ -55,13 +61,8 @@ class Sala:
             if nombre:
                 self.partida.jugadores[asiento_libre].nombre = nombre
 
-            # Ajustar nombres y estado de bots en huecos vacíos si estamos en modo multijugador
-            if self.modo == "multi":
-                for i in range(4):
-                    if i not in self.connections:
-                        self.partida.jugadores[i].humano = False
-                        if "Bot" not in self.partida.jugadores[i].nombre:
-                            self.partida.jugadores[i].nombre = f"Bot {i+1}"
+            if self.modo == "multi" and not self.iniciada:
+                self.partida.mensaje = f"{nombre} se ha unido. ({len(self.connections)}/4 conectados)."
 
         await self.broadcast()
         return asiento_libre
@@ -69,14 +70,15 @@ class Sala:
     def desconectar(self, asiento_id: int):
         if asiento_id in self.connections:
             del self.connections[asiento_id]
-            # Si un humano se desconecta en multijugador, pasa a ser gestionado por la IA
             if self.modo == "multi":
                 self.partida.jugadores[asiento_id].humano = False
 
     async def broadcast(self):
         for p_id in range(4):
             estado = self.partida.obtener_estado_cliente(p_id)
-            estado["tu_id"] = p_id  # Informa al cliente cuál es su id asignado
+            estado["tu_id"] = p_id
+            estado["esperando_inicio"] = not self.iniciada
+            estado["num_conectados"] = len(self.connections)
             if p_id in self.connections:
                 try:
                     await self.connections[p_id].send_json(estado)
@@ -88,7 +90,12 @@ class Sala:
             while True:
                 await asyncio.sleep(0.8)
                 async with self.lock:
-                    if self.partida.estado == "REPARTIR":
+                    # Si la partida no ha sido iniciada en multijugador, espera
+                    if not self.iniciada:
+                        continue
+
+                    if self.partida.estado in ["REPARTIR", "ESPERANDO"]:
+                        self.partida.estado = "REPARTIR"
                         self.partida.repartir()
                         await self.broadcast()
                         await asyncio.sleep(1.2)
@@ -134,7 +141,20 @@ class RoomManager:
 
 room_manager = RoomManager()
 
-# WebSocket Endpoint adaptado a salas dinámicas
+# Endpoint HTTP para obtener la lista de salas activas y su ocupación
+@app.get("/api/salas")
+async def listar_salas():
+    resultado = []
+    for sala_id, sala in room_manager.salas.items():
+        if sala.modo == "multi":
+            resultado.append({
+                "id": sala_id,
+                "humanos": len(sala.connections),
+                "iniciada": sala.iniciada
+            })
+    return resultado
+
+# WebSocket Endpoint adaptado
 @app.websocket("/ws/{sala_id}")
 async def websocket_endpoint(websocket: WebSocket, sala_id: str):
     nombre = websocket.query_params.get("nombre", "Jugador")
@@ -152,11 +172,22 @@ async def websocket_endpoint(websocket: WebSocket, sala_id: str):
             action = data.get("action")
 
             async with sala.lock:
-                if action == "reiniciar_partida":
+                if action == "iniciar_partida":
+                    sala.iniciada = True
+                    # Reemplazar con Bots los huecos donde no haya entrado ningún jugador humano
+                    for i in range(4):
+                        if i not in sala.connections:
+                            sala.partida.jugadores[i].humano = False
+                            if "Bot" not in sala.partida.jugadores[i].nombre:
+                                sala.partida.jugadores[i].nombre = f"Bot {i+1}"
+                    await sala.broadcast()
+
+                elif action == "reiniciar_partida":
                     nombres = data.get("nombres", [])
                     carta_inicio = data.get("carta_inicio", 1)
                     manos_pico = data.get("manos_pico", 4)
                     sala.partida.reiniciar(nombres, carta_inicio, manos_pico)
+                    sala.iniciada = True
                     for i in range(4):
                         sala.partida.jugadores[i].humano = (i in sala.connections)
                     await sala.broadcast()
