@@ -1,5 +1,5 @@
 let ws = null;
-let miJugadorId = 0; // ID del jugador (0 por defecto)
+let miJugadorId = 0; // Asiento asignado por el servidor
 let miApuestaSeleccionada = 0;
 let maxCartasRonda = 1;
 let prohibidoActual = -1;
@@ -30,7 +30,7 @@ const selectCartaInicio = document.getElementById("select-carta-inicio");
 const selectManosPico = document.getElementById("select-manos-pico");
 const resumenSecuencia = document.getElementById("resumen-secuencia");
 
-// Función para alternar la visibilidad de la sala en el lobby
+// Control de visibilidad en el lobby
 function actualizarVisibilidadLobby() {
     if (selectModo.value === "bots") {
         grupoCodigoSala.classList.add("oculto");
@@ -40,27 +40,23 @@ function actualizarVisibilidadLobby() {
 }
 
 selectModo.onchange = actualizarVisibilidadLobby;
-actualizarVisibilidadLobby(); // Ejecutar al cargar
+actualizarVisibilidadLobby();
 
-// Botón "Entrar a la Partida"
+// Evento al hacer clic en "Entrar a la Partida"
 btnEntrarJuego.onclick = () => {
     const nombre = inputMiNombre.value.trim() || "Luis";
     const modo = selectModo.value;
     
-    // Si la sala está vacía o es modo bots, conecta a la sala principal 0
     let sala = inputCodigoSala.value.trim();
     if (modo === "bots" || !sala) {
-        sala = "0";
+        sala = "solo_" + Math.random().toString(36).substring(2, 7);
     }
 
-    // Ocultar el modal de inmediato
     modalLobby.classList.add("oculto");
-
     conectarASala(sala, nombre, modo);
 };
 
 function conectarASala(salaId, nombreJugador, modo) {
-    // Si ya hay un WebSocket abierto, lo cerramos antes de abrir uno nuevo
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
         ws.close();
     }
@@ -69,15 +65,14 @@ function conectarASala(salaId, nombreJugador, modo) {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = isLocal ? 'localhost:8000' : window.location.host;
 
-    // Conexión limpia al endpoint WS
-    const wsUrl = `${protocol}//${host}/ws/${salaId}`;
+    const wsUrl = `${protocol}//${host}/ws/${salaId}?nombre=${encodeURIComponent(nombreJugador)}&modo=${modo}`;
     
     bannerMensaje.innerText = "Conectando al servidor...";
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
-        console.log(`Conectado exitosamente a la sala: ${salaId}`);
-        bannerMensaje.innerText = "Conectado. ¡Que empiece la partida!";
+        console.log(`Conectado a la sala: ${salaId}`);
+        bannerMensaje.innerText = "¡Conectado a la partida!";
     };
 
     ws.onmessage = (event) => {
@@ -93,10 +88,6 @@ function conectarASala(salaId, nombreJugador, modo) {
     ws.onerror = (err) => {
         console.error("Error en WebSocket:", err);
         bannerMensaje.innerText = "Error de conexión con el servidor.";
-    };
-
-    ws.onclose = () => {
-        console.log("WebSocket cerrado.");
     };
 }
 
@@ -115,7 +106,7 @@ function actualizarPantalla(estado) {
     maxCartasRonda = estado.cant_cartas;
     prohibidoActual = (estado.prohibido !== undefined) ? estado.prohibido : -1;
 
-    // Cálculo y formato del panel superior de apuestas
+    // Marcador y cálculo superior de apuestas
     const totalPedidas = estado.total_apuestas;
     const totalCartas = estado.cant_cartas;
     let estadoPedidaTexto = "";
@@ -131,18 +122,22 @@ function actualizarPantalla(estado) {
     }
     textoBazasTop.innerText = `Pedidas: ${totalPedidas} / ${totalCartas} ${estadoPedidaTexto}`;
 
-    // Marcador y Badges (REPARTE / MANO)
+    // Marcador lateral y asignación de posiciones dinámicas en mesa
     listaPuntos.innerHTML = "";
     estado.jugadores.forEach((jug) => {
         const li = document.createElement("li");
         li.innerText = `${jug.nombre}: ${jug.puntos} pts`;
         listaPuntos.appendChild(li);
 
+        // Mapeo relativo para que CADA jugador se vea SIEMPRE abajo
+        // relPos: 0 = Abajo (Tú), 1 = Derecha, 2 = Enfrente, 3 = Izquierda
+        const relPos = (jug.id - miJugadorId + 4) % 4;
+
         const apTxt = jug.apuesta !== -1 ? jug.apuesta : "?";
-        const elemBazas = document.getElementById(`bazas-${jug.id}`);
-        const elemnom = document.getElementById(`nom-${jug.id}`);
-        const elemRol = document.getElementById(`rol-${jug.id}`);
-        const divPos = document.getElementById(`jugador-${jug.id}`) || document.getElementById("zona-humano");
+        const elemBazas = document.getElementById(`bazas-${relPos}`);
+        const elemnom = document.getElementById(`nom-${relPos}`);
+        const elemRol = document.getElementById(`rol-${relPos}`);
+        const divPos = document.getElementById(`jugador-${relPos}`) || document.getElementById("zona-humano");
 
         if (elemBazas) elemBazas.innerText = `Bazas: ${jug.bazas_ganadas}/${apTxt}`;
         if (elemnom) elemnom.innerText = jug.nombre;
@@ -169,7 +164,7 @@ function actualizarPantalla(estado) {
         }
     });
 
-    // Mesa
+    // Cartas en la Mesa
     const mesaSlot = document.getElementById("mesa-cartas");
     mesaSlot.innerHTML = "";
     estado.mesa.forEach((item) => {
@@ -179,7 +174,7 @@ function actualizarPantalla(estado) {
         mesaSlot.appendChild(img);
     });
 
-    // Mano del jugador actual
+    // Mano del Jugador Local
     manoCartasContainer.innerHTML = "";
     const yo = estado.jugadores[miJugadorId];
     if (yo && yo.mano) {
@@ -202,7 +197,7 @@ function actualizarPantalla(estado) {
         });
     }
 
-    // Panel Apuestas
+    // Panel de Apuestas
     if (estado.estado === "APUESTAS" && estado.turno === miJugadorId && yo && yo.apuesta === -1) {
         if (panelApuestas.classList.contains("oculto")) {
             panelApuestas.classList.remove("oculto");
@@ -245,7 +240,7 @@ btnConfirmarApuesta.onclick = () => {
     cantApuestaSpan.innerText = 0;
 };
 
-// Generador de Vista Previa de la Secuencia en el Modal
+// Generador de Vista Previa de la Secuencia
 function actualizarResumenSecuencia() {
     const inicio = parseInt(selectCartaInicio.value);
     const pico = parseInt(selectManosPico.value);
@@ -261,7 +256,7 @@ function actualizarResumenSecuencia() {
 selectCartaInicio.onchange = actualizarResumenSecuencia;
 selectManosPico.onchange = actualizarResumenSecuencia;
 
-// Abrir / Cerrar / Iniciar Partida desde Modal
+// Configuración / Reinicio de partida
 btnAbrirConfig.onclick = () => {
     actualizarResumenSecuencia();
     modalConfig.classList.remove("oculto");
