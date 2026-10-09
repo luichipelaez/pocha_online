@@ -244,8 +244,8 @@ body {
     padding: 5px 0;
 }
 
-/* Panel de Apuestas */
-#panel-apuestas {
+/* Panel de Espera Multijugador y Apuestas */
+#panel-espera, #panel-apuestas {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -256,8 +256,19 @@ body {
     border-radius: 15px;
     text-align: center;
     z-index: 100;
-    width: 280px;
+    width: 290px;
     box-shadow: 0 0 20px rgba(0,0,0,0.8);
+}
+
+#panel-espera h3 {
+    color: gold;
+    margin-bottom: 10px;
+}
+
+#texto-estado-espera {
+    font-size: 13px;
+    color: #ddd;
+    line-height: 1.4;
 }
 
 .texto-advertencia {
@@ -420,7 +431,7 @@ body {
 .oculto { display: none !important; }
 
 /* =========================================================
-   MEDIA QUERIES - TABLETS
+   MEDIA QUERIES - TABLETS Y MÓVILES
    ========================================================= */
 @media (max-width: 820px) {
     #pantalla-juego {
@@ -436,9 +447,7 @@ body {
         left: 10px;
     }
 
-    #marcador h3 {
-        font-size: 12px;
-    }
+    #marcador h3 { font-size: 12px; }
 
     .carta-img {
         width: 52px;
@@ -454,9 +463,6 @@ body {
     }
 }
 
-/* =========================================================
-   MEDIA QUERIES - MÓVILES
-   ========================================================= */
 @media (max-width: 600px) {
     #pantalla-juego {
         border-width: 0;
@@ -466,9 +472,7 @@ body {
         height: 100dvh;
     }
 
-    #barras-superiores {
-        top: 2px;
-    }
+    #barras-superiores { top: 2px; }
 
     #info-triunfo, #info-bazas-top {
         font-size: 11px;
@@ -490,45 +494,25 @@ body {
         background: rgba(0, 0, 0, 0.85);
     }
 
-    #marcador h3 {
-        font-size: 11px;
-    }
+    #marcador h3 { font-size: 11px; }
 
     .carta-img {
         width: 44px;
         height: 68px;
     }
 
-    #mano-cartas {
-        gap: -10px;
-    }
-
-    #mano-cartas .carta-img {
-        margin-left: -12px;
-    }
-
-    #mano-cartas .carta-img:first-child {
-        margin-left: 0;
-    }
+    #mano-cartas { gap: -10px; }
+    #mano-cartas .carta-img { margin-left: -12px; }
+    #mano-cartas .carta-img:first-child { margin-left: 0; }
 
     .jugador-pos {
         padding: 4px 6px;
         font-size: 10px;
     }
 
-    #jugador-2 {
-        top: 58px;
-    }
-
-    #jugador-3 {
-        top: 38%;
-        left: 4px;
-    }
-
-    #jugador-1 {
-        top: 38%;
-        right: 4px;
-    }
+    #jugador-2 { top: 58px; }
+    #jugador-3 { top: 38%; left: 4px; }
+    #jugador-1 { top: 38%; right: 4px; }
 
     .badge-rol {
         font-size: 8px;
@@ -541,14 +525,12 @@ body {
         gap: 5px;
     }
 
-    #panel-apuestas {
+    #panel-espera, #panel-apuestas {
         width: 90%;
         padding: 14px;
     }
 
-    #cant-apuesta {
-        font-size: 20px;
-    }
+    #cant-apuesta { font-size: 20px; }
 
     .controles-apuesta button {
         width: 32px;
@@ -556,7 +538,5 @@ body {
         font-size: 16px;
     }
 
-    .campo-nombre input, .campo-opcion select {
-        width: 55%;
-    }
+    .campo-nombre input, .campo-opcion select { width: 55%; }
 }
