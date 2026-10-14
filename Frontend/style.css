@@ -58,7 +58,7 @@ body {
     gap: 8px;
 }
 
-#btn-abrir-config {
+#btn-abrir-config, #btn-sonido {
     background: transparent;
     border: none;
     font-size: 18px;
@@ -67,8 +67,8 @@ body {
     transition: transform 0.2s;
 }
 
-#btn-abrir-config:hover {
-    transform: rotate(45deg);
+#btn-abrir-config:hover, #btn-sonido:hover {
+    transform: scale(1.2);
 }
 
 #marcador ul { list-style: none; }
@@ -125,6 +125,7 @@ body {
     border-radius: 8px;
     text-align: center;
     font-size: 13px;
+    transition: background 0.3s, border 0.3s;
 }
 
 .cabecera-jugador {
@@ -163,9 +164,20 @@ body {
     color: white;
 }
 
+/* ANIMACIÓN: Resplandor radiante para el jugador en turno */
 .turno-activo {
-    border: 2px solid gold;
-    background: rgba(218, 165, 32, 0.4) !important;
+    border: 2px solid gold !important;
+    background: rgba(218, 165, 32, 0.45) !important;
+    animation: pulsoTurno 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes pulsoTurno {
+    0% {
+        box-shadow: 0 0 5px rgba(255, 215, 0, 0.4);
+    }
+    100% {
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.9);
+    }
 }
 
 /* Tapete y Cartas Jugadas */
@@ -195,15 +207,50 @@ body {
     border-radius: 6px;
     box-shadow: 2px 2px 8px rgba(0,0,0,0.5);
     flex-shrink: 0;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+/* ANIMACIÓN: Caída y rotación al jugar una carta */
+.carta-animada {
+    animation: lanzarCarta 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes lanzarCarta {
+    0% {
+        transform: scale(1.4) translateY(-30px) rotate(-12deg);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1) translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+/* ANIMACIÓN: Limpieza de baza ganada */
+.baza-limpiando {
+    animation: bazaGanada 0.6s ease-in-out forwards;
+}
+
+@keyframes bazaGanada {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.15) translateY(-20px);
+    }
+    100% {
+        transform: scale(0.2) translateY(-120px);
+        opacity: 0;
+    }
 }
 
 .carta-jugable {
     cursor: pointer;
-    transition: transform 0.2s;
 }
 
 .carta-jugable:hover {
-    transform: translateY(-12px) scale(1.05);
+    transform: translateY(-14px) scale(1.08);
 }
 
 .carta-bloqueada {
@@ -229,6 +276,7 @@ body {
     padding: 3px 12px;
     border-radius: 8px;
     font-size: 13px;
+    transition: background 0.3s, border 0.3s;
 }
 
 #info-humano .badge-rol {
