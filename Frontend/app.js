@@ -1,5 +1,125 @@
+// =========================================================
+// SINTETIZADOR DE SONIDOS (Web Audio API - Sin archivos externos)
+// =========================================================
+class SonidosPocha {
+    constructor() {
+        this.ctx = null;
+        this.mutado = false;
+    }
+
+    init() {
+        if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+
+    toggleMute() {
+        this.mutado = !this.mutado;
+        return this.mutado;
+    }
+
+    playCarta() {
+        if (this.mutado) return;
+        this.init();
+        if (!this.ctx) return;
+
+        // Ruido blanco simulando el choque/deslice de la carta
+        const bufferSize = this.ctx.sampleRate * 0.08;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+        }
+
+        const whiteNoise = this.ctx.createBufferSource();
+        whiteNoise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1200, this.ctx.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.08);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+        whiteNoise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        whiteNoise.start();
+    }
+
+    playTurno() {
+        if (this.mutado) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+
+        osc.frequency.setValueAtTime(587.33, this.ctx.currentTime); // D5
+        osc.frequency.setValueAtTime(880, this.ctx.currentTime + 0.08); // A5
+
+        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.25);
+    }
+
+    playBazaGanada() {
+        if (this.mutado) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const notas = [523.25, 659.25, 783.99, 1046.50]; // Acorde Do Mayor (C5, E5, G5, C6)
+        notas.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.value = freq;
+
+            const startTime = this.ctx.currentTime + idx * 0.06;
+            gain.gain.setValueAtTime(0.12, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.2);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(startTime);
+            osc.stop(startTime + 0.2);
+        });
+    }
+
+    playRepartir() {
+        if (this.mutado) return;
+        this.init();
+        if (!this.ctx) return;
+
+        for (let i = 0; i < 4; i++) {
+            setTimeout(() => this.playCarta(), i * 60);
+        }
+    }
+}
+
+const audio = new SonidosPocha();
+
+// Estado anterior para detectar cambios de eventos
+let prevMesaLength = 0;
+let prevTurno = -1;
+let prevEstado = "";
+
 let ws = null;
-let miJugadorId = 0; // Asiento asignado por el servidor
+let miJugadorId = 0;
 let miApuestaSeleccionada = 0;
 let maxCartasRonda = 1;
 let prohibidoActual = -1;
@@ -14,6 +134,7 @@ const grupoCodigoSala = document.getElementById("grupo-codigo-sala");
 const inputCodigoSala = document.getElementById("input-codigo-sala");
 const btnEntrarJuego = document.getElementById("btn-entrar-juego");
 
+const btnSonido = document.getElementById("btn-sonido");
 const bannerMensaje = document.getElementById("mensaje-texto");
 const textoTriunfo = document.getElementById("texto-triunfo");
 const textoBazasTop = document.getElementById("texto-bazas-top");
@@ -37,7 +158,15 @@ const selectCartaInicio = document.getElementById("select-carta-inicio");
 const selectManosPico = document.getElementById("select-manos-pico");
 const resumenSecuencia = document.getElementById("resumen-secuencia");
 
-// Cargar lista de salas activas desde la API HTTP
+// Inicializar audio con interacción de usuario
+document.addEventListener('click', () => audio.init(), { once: true });
+
+btnSonido.onclick = () => {
+    const mutado = audio.toggleMute();
+    btnSonido.innerText = mutado ? "🔇" : "🔊";
+};
+
+// Cargar lista de salas activas
 async function cargarSalasActivas() {
     try {
         const response = await fetch('/api/salas');
@@ -91,6 +220,7 @@ actualizarVisibilidadLobby();
 
 // Entrar a la partida
 btnEntrarJuego.onclick = () => {
+    audio.init();
     const nombre = inputMiNombre.value.trim() || "Luis";
     const modo = selectModo.value;
     
@@ -144,7 +274,6 @@ function conectarASala(salaId, nombreJugador, modo) {
     };
 }
 
-// Botón para comenzar la partida en multijugador
 btnComenzarPartida.onclick = () => {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ action: "iniciar_partida" }));
@@ -161,12 +290,36 @@ function actualizarEstadoBotonApuesta() {
 }
 
 function actualizarPantalla(estado) {
+    // --- EFECTOS DE SONIDO Y ACTIVACIÓN DE ANIMACIONES ---
+    if (prevEstado !== estado.estado && estado.estado === "REPARTIR") {
+        audio.playRepartir();
+    }
+
+    if (estado.mesa.length > prevMesaLength) {
+        audio.playCarta();
+    } else if (prevMesaLength === 4 && estado.mesa.length === 0) {
+        audio.playBazaGanada();
+        
+        // Efecto visual de limpieza en la mesa
+        const mesaSlot = document.getElementById("mesa-cartas");
+        Array.from(mesaSlot.children).forEach(child => child.classList.add("baza-limpiando"));
+    }
+
+    if (estado.turno === miJugadorId && prevTurno !== miJugadorId) {
+        audio.playTurno();
+    }
+
+    prevMesaLength = estado.mesa.length;
+    prevTurno = estado.turno;
+    prevEstado = estado.estado;
+
+    // Mensaje e Información
     bannerMensaje.innerText = estado.mensaje;
     textoTriunfo.innerText = `TRIUNFO: ${estado.triunfo ? estado.triunfo.toUpperCase() : '-'}`;
     maxCartasRonda = estado.cant_cartas;
     prohibidoActual = (estado.prohibido !== undefined) ? estado.prohibido : -1;
 
-    // Manejo del Panel de Espera Multijugador
+    // Panel de Espera Multijugador
     if (estado.esperando_inicio) {
         panelEspera.classList.remove("oculto");
         textoEstadoEspera.innerText = `Conectados: ${estado.num_conectados}/4 jugadores.\n${estado.mensaje}`;
@@ -174,7 +327,7 @@ function actualizarPantalla(estado) {
         panelEspera.classList.add("oculto");
     }
 
-    // Marcador y superior
+    // Marcador Superior
     const totalPedidas = estado.total_apuestas;
     const totalCartas = estado.cant_cartas;
     let estadoPedidaTexto = "";
@@ -190,7 +343,7 @@ function actualizarPantalla(estado) {
     }
     textoBazasTop.innerText = `Pedidas: ${totalPedidas} / ${totalCartas} ${estadoPedidaTexto}`;
 
-    // Posicionamiento dinámico relativo en mesa
+    // Jugadores y Marcador Lateral
     listaPuntos.innerHTML = "";
     estado.jugadores.forEach((jug) => {
         const li = document.createElement("li");
@@ -230,13 +383,13 @@ function actualizarPantalla(estado) {
         }
     });
 
-    // Cartas en Mesa
+    // Cartas en Mesa (con clase para animación de entrada)
     const mesaSlot = document.getElementById("mesa-cartas");
     mesaSlot.innerHTML = "";
     estado.mesa.forEach((item) => {
         const img = document.createElement("img");
         img.src = `cartas_img/${item.carta.key}.png`;
-        img.className = "carta-img";
+        img.className = "carta-img carta-animada";
         mesaSlot.appendChild(img);
     });
 
@@ -281,7 +434,7 @@ function actualizarPantalla(estado) {
     }
 }
 
-// Botones Pedir / Apostar
+// Controles de Apuestas
 document.getElementById("btn-mas").onclick = () => {
     if (miApuestaSeleccionada < maxCartasRonda) {
         miApuestaSeleccionada++;
@@ -306,7 +459,7 @@ btnConfirmarApuesta.onclick = () => {
     cantApuestaSpan.innerText = 0;
 };
 
-// Secuencia de juego
+// Configuración de Secuencia
 function actualizarResumenSecuencia() {
     const inicio = parseInt(selectCartaInicio.value);
     const pico = parseInt(selectManosPico.value);
