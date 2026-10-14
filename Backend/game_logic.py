@@ -39,10 +39,18 @@ class Jugador:
         self.nombre = nombre
         self.humano = humano
         self.id_orig = id_orig
-        self.mano = []
+        self.reset_stats()
+
+    def reset_stats(self):
         self.puntos = 0
+        self.mano = []
         self.apuesta = -1
         self.bazas_ganadas = 0
+        self.bazas_totales = 0
+        self.manos_acertadas = 0
+        self.racha_actual = 0
+        self.racha_maxima = 0
+        self.total_manos = 0
 
     def ordenar_mano(self):
         self.mano.sort(key=lambda c: (PALOS_ORDEN.get(c.palo, 99), -c.peso))
@@ -86,6 +94,8 @@ class Jugador:
                 cd["legal"] = True
             mano_dict.append(cd)
 
+        pct_acierto = round((self.manos_acertadas / self.total_manos * 100), 1) if self.total_manos > 0 else 0.0
+
         return {
             "id": self.id_orig,
             "nombre": self.nombre,
@@ -93,6 +103,11 @@ class Jugador:
             "puntos": self.puntos,
             "apuesta": self.apuesta,
             "bazas_ganadas": self.bazas_ganadas,
+            "bazas_totales": self.bazas_totales,
+            "manos_acertadas": self.manos_acertadas,
+            "total_manos": self.total_manos,
+            "pct_acierto": pct_acierto,
+            "racha_maxima": self.racha_maxima,
             "num_cartas": len(self.mano),
             "mano": mano_dict if (revelar_mano or self.humano) else []
         }
@@ -109,10 +124,7 @@ class PartidaPocha:
                     self.jugadores[i].nombre = nomb.strip()
 
         for j in self.jugadores:
-            j.puntos = 0
-            j.mano = []
-            j.apuesta = -1
-            j.bazas_ganadas = 0
+            j.reset_stats()
 
         self.secuencia = generar_secuencia(carta_inicio, 10, manos_pico)
         self.repartidor_idx = random.randint(0, 3)
@@ -132,7 +144,7 @@ class PartidaPocha:
     def repartir(self):
         if not self.secuencia:
             self.estado = "FIN"
-            self.mensaje = "¡Fin de la partida! Revisa el marcador final."
+            self.mensaje = "¡Fin de la partida! Revisa la clasificación final."
             return
         self.cant_cartas = self.secuencia.pop(0)
         baraja = [Carta(p, v) for p in PALOS for v in VALORES_NUM.keys()]
@@ -248,12 +260,24 @@ class PartidaPocha:
 
     def puntuacion_final_ronda(self):
         for j in self.jugadores:
+            j.total_manos += 1
+            j.bazas_totales += j.bazas_ganadas
             if j.bazas_ganadas == j.apuesta:
                 j.puntos += (5 + j.bazas_ganadas * 5)
+                j.manos_acertadas += 1
+                j.racha_actual += 1
+                if j.racha_actual > j.racha_maxima:
+                    j.racha_maxima = j.racha_actual
             else:
                 j.puntos -= 10
+                j.racha_actual = 0
+
         self.repartidor_idx = (self.repartidor_idx + 1) % 4
-        self.estado = "REPARTIR"
+        if not self.secuencia:
+            self.estado = "FIN"
+            self.mensaje = "¡Fin de la partida! Revisa la clasificación final."
+        else:
+            self.estado = "REPARTIR"
 
     def obtener_estado_cliente(self, jugador_id):
         j_solicitante = self.jugadores[jugador_id]
