@@ -134,7 +134,36 @@
         </div>
     </div>
 
-    <!-- Modal para Nueva Partida / Reiniciar -->
+    <!-- Modal de Fin de Partida / Estadísticas -->
+    <div id="modal-fin-partida" class="modal-overlay oculto">
+        <div class="modal-contenido modal-fin">
+            <h2>🏆 Clasificación Final</h2>
+            <p id="subtitulo-ganador" class="subtitulo-fin"></p>
+
+            <div class="tabla-contenedor">
+                <table class="tabla-estadisticas">
+                    <thead>
+                        <tr>
+                            <th>Pos</th>
+                            <th>Jugador</th>
+                            <th>Pts</th>
+                            <th>Bazas</th>
+                            <th>Acierto</th>
+                            <th>Racha</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpo-tabla-fin"></tbody>
+                </table>
+            </div>
+
+            <div class="acciones-modal">
+                <button id="btn-volver-lobby" class="btn-secundario">🏠 Ir al Lobby</button>
+                <button id="btn-nueva-partida-fin" class="btn-primario">🔄 Nueva Partida</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Configuración de Nueva Partida -->
     <div id="modal-config" class="modal-overlay oculto">
         <div class="modal-contenido">
             <h2>Configurar Nueva Partida</h2>
