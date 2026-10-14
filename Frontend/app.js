@@ -1,5 +1,5 @@
 // =========================================================
-// SINTETIZADOR DE SONIDOS (Web Audio API - Sin archivos externos)
+// SINTETIZADOR DE SONIDOS (Web Audio API)
 // =========================================================
 class SonidosPocha {
     constructor() {
@@ -27,7 +27,6 @@ class SonidosPocha {
         this.init();
         if (!this.ctx) return;
 
-        // Ruido blanco simulando el choque/deslice de la carta
         const bufferSize = this.ctx.sampleRate * 0.08;
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
         const output = buffer.getChannelData(0);
@@ -63,8 +62,8 @@ class SonidosPocha {
         const gain = this.ctx.createGain();
         osc.type = 'sine';
 
-        osc.frequency.setValueAtTime(587.33, this.ctx.currentTime); // D5
-        osc.frequency.setValueAtTime(880, this.ctx.currentTime + 0.08); // A5
+        osc.frequency.setValueAtTime(587.33, this.ctx.currentTime);
+        osc.frequency.setValueAtTime(880, this.ctx.currentTime + 0.08);
 
         gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
@@ -81,7 +80,7 @@ class SonidosPocha {
         this.init();
         if (!this.ctx) return;
 
-        const notas = [523.25, 659.25, 783.99, 1046.50]; // Acorde Do Mayor (C5, E5, G5, C6)
+        const notas = [523.25, 659.25, 783.99, 1046.50];
         notas.forEach((freq, idx) => {
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
@@ -109,11 +108,40 @@ class SonidosPocha {
             setTimeout(() => this.playCarta(), i * 60);
         }
     }
+
+    playFinPartida() {
+        if (this.mutado) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const melodía = [
+            { f: 523.25, t: 0.0 },
+            { f: 659.25, t: 0.15 },
+            { f: 783.99, t: 0.30 },
+            { f: 1046.50, t: 0.45 }
+        ];
+
+        melodía.forEach(n => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = n.f;
+
+            const st = this.ctx.currentTime + n.t;
+            gain.gain.setValueAtTime(0.2, st);
+            gain.gain.exponentialRampToValueAtTime(0.001, st + 0.4);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(st);
+            osc.stop(st + 0.4);
+        });
+    }
 }
 
 const audio = new SonidosPocha();
 
-// Estado anterior para detectar cambios de eventos
 let prevMesaLength = 0;
 let prevTurno = -1;
 let prevEstado = "";
@@ -150,6 +178,12 @@ const cantApuestaSpan = document.getElementById("cant-apuesta");
 const textoProhibido = document.getElementById("texto-prohibido");
 const btnConfirmarApuesta = document.getElementById("btn-confirmar-apuesta");
 
+const modalFinPartida = document.getElementById("modal-fin-partida");
+const subtituloGanador = document.getElementById("subtitulo-ganador");
+const cuerpoTablaFin = document.getElementById("cuerpo-tabla-fin");
+const btnVolverLobby = document.getElementById("btn-volver-lobby");
+const btnNuevaPartidaFin = document.getElementById("btn-nueva-partida-fin");
+
 const modalConfig = document.getElementById("modal-config");
 const btnAbrirConfig = document.getElementById("btn-abrir-config");
 const btnCancelarConfig = document.getElementById("btn-cancelar-config");
@@ -158,7 +192,6 @@ const selectCartaInicio = document.getElementById("select-carta-inicio");
 const selectManosPico = document.getElementById("select-manos-pico");
 const resumenSecuencia = document.getElementById("resumen-secuencia");
 
-// Inicializar audio con interacción de usuario
 document.addEventListener('click', () => audio.init(), { once: true });
 
 btnSonido.onclick = () => {
@@ -166,7 +199,7 @@ btnSonido.onclick = () => {
     btnSonido.innerText = mutado ? "🔇" : "🔊";
 };
 
-// Cargar lista de salas activas
+// Cargar salas
 async function cargarSalasActivas() {
     try {
         const response = await fetch('/api/salas');
@@ -236,6 +269,7 @@ btnEntrarJuego.onclick = () => {
     }
 
     modalLobby.classList.add("oculto");
+    modalFinPartida.classList.add("oculto");
     conectarASala(sala, nombre, modo);
 };
 
@@ -289,8 +323,50 @@ function actualizarEstadoBotonApuesta() {
     }
 }
 
+// Renderizar la tabla de estadisticas de Fin de Partida
+function mostrarModalFinPartida(jugadores) {
+    // Ordenar jugadores por puntos descendente
+    const clasificacion = [...jugadores].sort((a, b) => b.puntos - a.puntos || b.manos_acertadas - a.manos_acertadas);
+    
+    const ganador = clasificacion[0];
+    subtituloGanador.innerText = `¡${ganador.nombre} ha ganado la partida con ${ganador.puntos} puntos!`;
+
+    cuerpoTablaFin.innerHTML = "";
+    const medallas = ["🥇 1º", "🥈 2º", "🥉 3º", "4º"];
+
+    clasificacion.forEach((jug, index) => {
+        const tr = document.createElement("tr");
+        if (index === 0) tr.classList.add("fila-ganador");
+        if (jug.id === miJugadorId) tr.classList.add("fila-yo");
+
+        const pct = `${jug.pct_acierto}% (${jug.manos_acertadas}/${jug.total_manos})`;
+
+        tr.innerHTML = `
+            <td class="medalla-pos">${medallas[index] || (index + 1) + 'º'}</td>
+            <td><strong>${jug.nombre}</strong></td>
+            <td><strong>${jug.puntos}</strong></td>
+            <td>${jug.bazas_totales}</td>
+            <td>${pct}</td>
+            <td>🔥 ${jug.racha_maxima}</td>
+        `;
+        cuerpoTablaFin.appendChild(tr);
+    });
+
+    modalFinPartida.classList.remove("oculto");
+    audio.playFinPartida();
+}
+
 function actualizarPantalla(estado) {
-    // --- EFECTOS DE SONIDO Y ACTIVACIÓN DE ANIMACIONES ---
+    // --- MANEJO DE ESTADO FIN ---
+    if (estado.estado === "FIN") {
+        if (modalFinPartida.classList.contains("oculto")) {
+            mostrarModalFinPartida(estado.jugadores);
+        }
+    } else {
+        modalFinPartida.classList.add("oculto");
+    }
+
+    // --- EFECTOS DE SONIDO Y ANIMACIONES ---
     if (prevEstado !== estado.estado && estado.estado === "REPARTIR") {
         audio.playRepartir();
     }
@@ -299,8 +375,6 @@ function actualizarPantalla(estado) {
         audio.playCarta();
     } else if (prevMesaLength === 4 && estado.mesa.length === 0) {
         audio.playBazaGanada();
-        
-        // Efecto visual de limpieza en la mesa
         const mesaSlot = document.getElementById("mesa-cartas");
         Array.from(mesaSlot.children).forEach(child => child.classList.add("baza-limpiando"));
     }
@@ -313,13 +387,11 @@ function actualizarPantalla(estado) {
     prevTurno = estado.turno;
     prevEstado = estado.estado;
 
-    // Mensaje e Información
     bannerMensaje.innerText = estado.mensaje;
     textoTriunfo.innerText = `TRIUNFO: ${estado.triunfo ? estado.triunfo.toUpperCase() : '-'}`;
     maxCartasRonda = estado.cant_cartas;
     prohibidoActual = (estado.prohibido !== undefined) ? estado.prohibido : -1;
 
-    // Panel de Espera Multijugador
     if (estado.esperando_inicio) {
         panelEspera.classList.remove("oculto");
         textoEstadoEspera.innerText = `Conectados: ${estado.num_conectados}/4 jugadores.\n${estado.mensaje}`;
@@ -327,7 +399,6 @@ function actualizarPantalla(estado) {
         panelEspera.classList.add("oculto");
     }
 
-    // Marcador Superior
     const totalPedidas = estado.total_apuestas;
     const totalCartas = estado.cant_cartas;
     let estadoPedidaTexto = "";
@@ -343,7 +414,6 @@ function actualizarPantalla(estado) {
     }
     textoBazasTop.innerText = `Pedidas: ${totalPedidas} / ${totalCartas} ${estadoPedidaTexto}`;
 
-    // Jugadores y Marcador Lateral
     listaPuntos.innerHTML = "";
     estado.jugadores.forEach((jug) => {
         const li = document.createElement("li");
@@ -383,7 +453,6 @@ function actualizarPantalla(estado) {
         }
     });
 
-    // Cartas en Mesa (con clase para animación de entrada)
     const mesaSlot = document.getElementById("mesa-cartas");
     mesaSlot.innerHTML = "";
     estado.mesa.forEach((item) => {
@@ -393,7 +462,6 @@ function actualizarPantalla(estado) {
         mesaSlot.appendChild(img);
     });
 
-    // Mano Jugador Local
     manoCartasContainer.innerHTML = "";
     const yo = estado.jugadores[miJugadorId];
     if (yo && yo.mano) {
@@ -416,7 +484,6 @@ function actualizarPantalla(estado) {
         });
     }
 
-    // Panel de Apuestas
     if (estado.estado === "APUESTAS" && estado.turno === miJugadorId && yo && yo.apuesta === -1) {
         if (panelApuestas.classList.contains("oculto")) {
             panelApuestas.classList.remove("oculto");
@@ -434,7 +501,7 @@ function actualizarPantalla(estado) {
     }
 }
 
-// Controles de Apuestas
+// Botones Pedir / Apostar
 document.getElementById("btn-mas").onclick = () => {
     if (miApuestaSeleccionada < maxCartasRonda) {
         miApuestaSeleccionada++;
@@ -457,6 +524,20 @@ btnConfirmarApuesta.onclick = () => {
     panelApuestas.classList.add("oculto");
     miApuestaSeleccionada = 0;
     cantApuestaSpan.innerText = 0;
+};
+
+// Acciones modal Fin de Partida
+btnVolverLobby.onclick = () => {
+    if (ws) ws.close();
+    modalFinPartida.classList.add("oculto");
+    modalLobby.classList.remove("oculto");
+    actualizarVisibilidadLobby();
+};
+
+btnNuevaPartidaFin.onclick = () => {
+    modalFinPartida.classList.add("oculto");
+    actualizarResumenSecuencia();
+    modalConfig.classList.remove("oculto");
 };
 
 // Configuración de Secuencia
